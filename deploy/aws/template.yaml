@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  PricePulse - Serverless Dynamic Pricing Engine
+  Deploys FastAPI on AWS Lambda, API Gateway, S3 for model storage, and CloudWatch Monitoring (AWS Free Tier compliant).
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        PRICEPULSE_DB: /tmp/pricepulse.db
+        S3_MODEL_BUCKET: !Ref ModelStorageBucket
+
+Resources:
+  # 1. S3 Storage for Trained Models and Pricing Rules (5GB Free Tier)
+  ModelStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'pricepulse-artifacts-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+
+  # 2. Serverless FastAPI on AWS Lambda (1M free requests/month)
+  PricePulseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../backend/
+      Handler: app.lambda_handler.handler
+      Runtime: python3.11
+      Architectures:
+        - arm64
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Sub 'pricepulse-artifacts-${AWS::AccountId}'
+      Events:
+        ApiRoot:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+  # 3. CloudWatch Log Group & Alarms for Real-Time Inference Latency
+  PricePulseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${PricePulseFunction}'
+      RetentionInDays: 14
+
+  LatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: 'Alarm if inference duration exceeds 1 second (< 1s target)'
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref PricePulseFunction
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1000
+      ComparisonOperator: GreaterThanThreshold
+
+Outputs:
+  ApiUrl:
+    Description: 'HTTP API Gateway URL'
+    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/'
+  ModelBucket:
+    Description: 'S3 Model Artifact Storage Bucket'
+    Value: !Ref ModelStorageBucket

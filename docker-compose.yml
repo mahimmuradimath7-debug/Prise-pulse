@@ -1,0 +1,9 @@
+services:
+  pricepulse:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - pricepulse-data:/data
+volumes:
+  pricepulse-data:
