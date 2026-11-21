@@ -1,20 +1,23 @@
-# Stage 1: build the React UI
-FROM node:20-alpine AS ui
-WORKDIR /ui
-COPY frontend/package*.json ./
-RUN npm install --no-audit --no-fund
-COPY frontend/ ./
-RUN npx vite build --outDir /ui/dist --emptyOutDir
+FROM python:3.11-slim
 
-# Stage 2: API + bundled UI
-FROM python:3.12-slim
 WORKDIR /app/backend
-RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
+
+# Install OpenMP runtime required by XGBoost and gcc/curl if needed
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python requirements
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend code and prebuilt React UI assets
 COPY backend/ ./
-COPY --from=ui /ui/dist ./static
-ENV PRICEPULSE_DB=/data/pricepulse.db
-VOLUME /data
+
+# Environment configuration
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
+
 EXPOSE 8000
+
 CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
