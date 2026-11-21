@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: pricepulse
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PRICEPULSE_DB
+        value: /tmp/pricepulse.db
+      - key: PORT
+        value: 8000

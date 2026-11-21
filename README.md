@@ -31,7 +31,15 @@ For production deployment with Redis and Kafka:
 docker compose -f deploy/aws/docker-compose.prod.yml up --build
 ```
 
-### Option D: Development Mode (Hot-Reload React UI)
+### Option D: 1-Click Free Cloud Hosting via GitHub (Render / Railway)
+
+Connect your GitHub repository to [Render.com](https://render.com) or [Railway.app](https://railway.app):
+1. Sign in to **Render.com** with GitHub.
+2. Click **New +** -> **Web Service** -> select `Prise-pulse`.
+3. Choose **Docker** environment (it auto-detects `render.yaml` and `Dockerfile`).
+4. Click **Deploy Web Service**. You will receive a live public URL (e.g. `https://prise-pulse.onrender.com`).
+
+### Option E: Development Mode (Hot-Reload React UI)
 
 ```bash
 cd backend && . .venv/bin/activate && uvicorn app.main:app --reload --port 8000  # Terminal 1
